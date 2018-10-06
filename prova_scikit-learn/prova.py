@@ -1,15 +1,16 @@
 from sklearn import tree
-from random import randint
+from random import randint, shuffle
 
-data_set_name = "krkopt"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
+data_set_name = "tic-tac-toe"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
 data_root = "../data_set/" + data_set_name + ".data"
-test_set_relation = 1/2
+test_set_relation = 1 / 3
+cross_validation_number = 3
 
 file = open(data_root, "r")
 data = file.readlines()
 file.close()
 
-print("\nData len: " + str(len(data)))
+print("\nElementi del data set: " + str(len(data)) + "\n")
 
 if data_set_name == "tic-tac-toe":
     for i in range(0, len(data)):
@@ -28,44 +29,102 @@ elif data_set_name == "krkopt":
         data[i] = data[i].replace("g", "7")
         data[i] = data[i].replace("h", "8")
 
-training_set = data.copy()
+training_set = []
 test_set = []
 
-num_of_test = len(training_set) / 3
-while len(test_set) < num_of_test:
-    n = randint(0, len(training_set) - 1)
-    test_set.append(training_set[n])
-    training_set.pop(n)
 
-print("Training_set len: " + str(len(training_set)))
-print("Test_set len: " + str(len(test_set)) + "\n")
+def resubstitution_method():
+    global training_set, test_set
 
-training_X = []
-training_Y = []
-test_X = []
-test_Y = []
+    training_set = data.copy()
+    test_set = data.copy()
 
-for i in training_set:
-    elements = i.split(",")
-    training_Y.append(elements[len(elements) - 1])
-    elements.pop(len(elements) - 1)
-    elements = [int(j) for j in elements]
-    training_X.append(elements.copy())
+    resolution()
 
-for i in test_set:
-    elements = i.split(",")
-    test_Y.append(elements[len(elements) - 1])
-    elements.pop(len(elements) - 1)
-    elements = [int(j) for j in elements]
-    test_X.append(elements.copy())
 
-clf = tree.DecisionTreeClassifier()
-clf = clf.fit(training_X, training_Y)
-ris = clf.predict(test_X)
+def test_set_method():
+    global training_set, test_set
 
-correct_evaluation = 0
-for i in range(0, len(ris)):
-    if str(ris[i]) == str(test_Y[i]):
-        correct_evaluation = correct_evaluation + 1
-    #print(str(ris[i]).strip() + " --> " + str(test_Y[i]).strip())
-print("\nCorrect evaluation: " + str(correct_evaluation) + " / " + str(len(test_Y)))
+    training_set = data.copy()
+    test_set = []
+
+    num_of_test = len(training_set) * test_set_relation
+    while len(test_set) < num_of_test:
+        n = randint(0, len(training_set) - 1)
+        test_set.append(training_set[n])
+        training_set.pop(n)
+
+    resolution()
+
+
+def cross_validation_method():
+    global training_set, test_set, i
+
+    training_set = data.copy()
+    test_set = []
+
+    group_of_test_set = []
+    for i in range(0, cross_validation_number):
+        group_of_test_set.append([])
+    shuffle(training_set)
+    for j in range(0, len(training_set)):
+        group_of_test_set[j % cross_validation_number].append(training_set[j])
+
+    results = []
+    for j in group_of_test_set:
+        test_set = j
+        training_set = data.copy()
+        for ts in test_set:
+            training_set.remove(ts)
+        results.append(float(resolution()))
+
+    print("Cross validation evaluation: " + str(int(sum(results) / len(results) * 100)) + "%\n")
+
+
+def resolution():
+    global i
+
+    print("Training_set len: " + str(len(training_set)))
+    print("Test_set len: " + str(len(test_set)))
+
+    training_X = []
+    training_Y = []
+    test_X = []
+    test_Y = []
+
+    for i in training_set:
+        elements = i.split(",")
+        training_Y.append(elements[len(elements) - 1])
+        elements.pop(len(elements) - 1)
+        elements = [int(j) for j in elements]
+        training_X.append(elements.copy())
+
+    for i in test_set:
+        elements = i.split(",")
+        test_Y.append(elements[len(elements) - 1])
+        elements.pop(len(elements) - 1)
+        elements = [int(j) for j in elements]
+        test_X.append(elements.copy())
+
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(training_X, training_Y)
+    ris = clf.predict(test_X)
+
+    correct_evaluation = 0
+    for i in range(0, len(ris)):
+        if str(ris[i]) == str(test_Y[i]):
+            correct_evaluation = correct_evaluation + 1
+    print("Correct evaluation: " + str(correct_evaluation) + " / " + str(len(test_Y)) +
+          " = " + str(int(int(correct_evaluation) / len(test_Y) * 100)) + "%\n")
+
+    return int(correct_evaluation) / len(test_Y)
+
+
+print("\nMetodo di valutazione dell'errore: risostituzione")
+resubstitution_method()
+
+print("\nMetodo di valutazione dell'errore: test set")
+test_set_method()
+
+print("\nMetodo di valutazione dell'errore: cross validation")
+cross_validation_method()
