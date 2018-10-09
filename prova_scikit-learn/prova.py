@@ -1,5 +1,6 @@
 from sklearn import tree
 from random import randint, shuffle
+import prova_albero.prova as our_decision_tree_classifier
 
 data_set_name = "tic-tac-toe"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
 data_root = "../data_set/" + data_set_name + ".data"
@@ -133,9 +134,14 @@ def resolution():
         elements = [int(j) for j in elements]
         test_X.append(elements.copy())
 
+    """
     clf = tree.DecisionTreeClassifier()
     clf = clf.fit(training_X, training_Y)
     ris = clf.predict(test_X)
+    """
+    clf = our_decision_tree_classifier
+    decision_tree = clf.fit(training_X, training_Y)
+    ris = clf.predict(test_X, decision_tree)
 
     correct_evaluation = 0
     for i in range(0, len(ris)):

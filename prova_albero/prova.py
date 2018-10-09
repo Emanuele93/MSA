@@ -35,6 +35,7 @@ def gini(labels):
 def splittable(data, labels):
     # check_labels = len(data) > 1
     # 4 righe sotto per non dividere i data con etichette tutte uguali, riga sopra per arrivare ai singoli nodi
+
     check_labels = False
     for i in labels:
         if i != labels[0]:
@@ -108,21 +109,8 @@ def classifier(data, node):
     return node.false_branch_label
 
 
-def predict(data):
+def predict(data, root):
     ris = []
     for element in data:
         ris.append(classifier(element, root))
     return ris
-
-
-data_X = [[1, 1], [2, 2], [3, 4], [2, 5], [6, 6], [6, 3], [3, 1], [4, 4]]
-data_Y = ["A", "A", "B", "B", "A", "B", "B", "A"]
-data_X_test = [[1, 1], [2, 2], [3, 4], [2, 5], [6, 6], [6, 3], [3, 1], [4, 4]]
-data_Y_test = ["A", "A", "B", "B", "A", "B", "B", "A"]
-print(data_X)
-print(data_Y)
-root = fit(data_X, data_Y)
-evaluations = predict(data_X_test)
-print("---------------------------------------------")
-for e in range(len(evaluations)):
-    print(str(evaluations[e]) + " --> " + str(data_Y_test[e]))
