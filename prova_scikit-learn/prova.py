@@ -29,6 +29,33 @@ elif data_set_name == "krkopt":
         data[i] = data[i].replace("g", "7")
         data[i] = data[i].replace("h", "8")
 
+elif data_set_name == "poker-hand-training-true":
+    new_data = []
+    for i in data:
+        d_elements = i.split(",")
+        label = d_elements.pop(len(d_elements) - 1)
+        d_elements = [int(j) for j in d_elements]
+        q = 1
+        while q < len(d_elements) - 2:
+            w = q + 2
+            while w < len(d_elements):
+                if d_elements[q] > d_elements[w] or (d_elements[q] == d_elements[w] and d_elements[q - 1] > d_elements[w - 1]):
+                    temp = d_elements[q]
+                    d_elements[q] = d_elements[w]
+                    d_elements[w] = temp
+                    temp = d_elements[q - 1]
+                    d_elements[q - 1] = d_elements[w - 1]
+                    d_elements[w - 1] = temp
+                w = w+2
+            q = q + 2
+        string = str(d_elements[0])
+        for e in range(1, len(d_elements)):
+            string = string + "," + str(d_elements[e])
+        string = string + "," + label
+        new_data.append(string)
+    data = new_data.copy()
+
+
 training_set = []
 test_set = []
 
