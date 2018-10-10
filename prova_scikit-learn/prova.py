@@ -1,5 +1,6 @@
 from sklearn import tree
 from random import randint, shuffle
+
 import prova_albero.prova as our_decision_tree_classifier
 
 data_set_name = "tic-tac-toe"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
