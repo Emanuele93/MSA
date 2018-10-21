@@ -142,21 +142,20 @@ def split(data, labels, col, value):
     return true_branch, false_branch, true_branch_labels, false_branch_labels
 
 
-def fit(data, labels, gini_value, pre_pruning_no_useless_split=True, pre_pruning_minimum_n_object=1,
-        post_pruning_pessimistic = True, post_pruning_reduced_error = True):
+def fit(data, labels, gini_value, pre_pruning_no_useless_split=True, pre_pruning_minimum_n_object=1, num=0):
     col, value, gini_value_true, gini_value_false, gain = \
         splittable(data, labels, gini_value, pre_pruning_no_useless_split, pre_pruning_minimum_n_object)
     if col >= 0:
         true_branch, false_branch, true_branch_labels, false_branch_labels = split(data, labels, col, value)
-        false_branch = fit(false_branch, false_branch_labels, gini_value_false,
-                           pre_pruning_no_useless_split=pre_pruning_no_useless_split,
-                           pre_pruning_minimum_n_object=pre_pruning_minimum_n_object)
-        true_branch = fit(true_branch, true_branch_labels, gini_value_true,
-                           pre_pruning_no_useless_split=pre_pruning_no_useless_split,
-                           pre_pruning_minimum_n_object=pre_pruning_minimum_n_object)
+        false_branch, num = fit(false_branch, false_branch_labels, gini_value_false,
+                                pre_pruning_no_useless_split=pre_pruning_no_useless_split,
+                                pre_pruning_minimum_n_object=pre_pruning_minimum_n_object, num=num)
+        true_branch, num = fit(true_branch, true_branch_labels, gini_value_true,
+                               pre_pruning_no_useless_split=pre_pruning_no_useless_split,
+                               pre_pruning_minimum_n_object=pre_pruning_minimum_n_object, num=num)
         return Tree(col, value, major_label(labels), true_branch, false_branch,
-                    len(true_branch_labels), len(false_branch_labels), gini_value, gain)
-    return Tree(None, None, major_label(labels), None, None, len(data), 0, 0, 0)
+                    len(true_branch_labels), len(false_branch_labels), gini_value, gain), num + 1
+    return Tree(None, None, major_label(labels), None, None, len(data), 0, 0, 0), num + 1
 
 
 def classifier(data, node):
@@ -178,105 +177,79 @@ def predict(data, root):
     return ris
 
 
-def post_pruning(tree, min_gain):
+def post_pruning_pessimistic_method(tree, min_gain, num=0):
     if tree.true_branch.col is not None:
-        post_pruning(tree.true_branch, min_gain)
+        num, tree.true_branch = post_pruning_pessimistic_method(tree.true_branch, min_gain, num=num)
     if tree.false_branch.col is not None:
-        post_pruning(tree.false_branch, min_gain)
+        num, tree.false_branch = post_pruning_pessimistic_method(tree.false_branch, min_gain, num=num)
 
-    if tree.true_branch.col is None and tree.false_branch.col is None:
-        if tree.gain < min_gain:
-            tree.col = None
-            tree.value = None
-            tree.true_branch = None
-            tree.false_branch = None
+    if tree.true_branch.col is None and tree.false_branch.col is None and tree.gain < min_gain:
+        tree.col = None
+        tree.value = None
+        tree.true_branch = None
+        tree.false_branch = None
+        num += 2
+    return num, tree
+
+
+def useless_node(root, pruning_set_x, pruning_set_y, error):
+    ris = predict(pruning_set_x, root)
+    n = 0
+    for i in range(0, len(ris)):
+        if ris[i] != pruning_set_y[i]:
+            n += 1
+    if error < n:
+        return False, error
+    return True, n
+
+
+def reduced_error(root, sub_tree, pruning_set_x, pruning_set_y, error, num=0):
+    if sub_tree.true_branch.col is not None:
+        sub_tree.true_branch, num, error = reduced_error(root, sub_tree.true_branch, pruning_set_x, pruning_set_y, error, num=num)
+    if sub_tree.false_branch.col is not None:
+        sub_tree.false_branch, num, error = reduced_error(root, sub_tree.false_branch, pruning_set_x, pruning_set_y, error, num=num)
+
+    if sub_tree.true_branch.col is None and sub_tree.false_branch.col is None:
+        temp_sub_tree_col = sub_tree.col
+        sub_tree.col = None
+        temp_sub_tree_value = sub_tree.value
+        sub_tree.value = None
+        temp_sub_tree_true_branch = sub_tree.true_branch
+        sub_tree.true_branch = None
+        temp_sub_false_true_branch = sub_tree.false_branch
+        sub_tree.false_branch = None
+        num += 2
+        useless, new_error_n = useless_node(root, pruning_set_x, pruning_set_y, error)
+        if not useless:
+            sub_tree.col = temp_sub_tree_col
+            sub_tree.value = temp_sub_tree_value
+            sub_tree.true_branch = temp_sub_tree_true_branch
+            sub_tree.false_branch = temp_sub_false_true_branch
+            num -= 2
+        else:
+            error = new_error_n
+
+    return sub_tree, num, error
+
+
+def post_pruning_reduced_error_method(tree, pruning_set_x, pruning_set_y):
+    ris_d_t = predict(pruning_set_x, tree)
+    count_error = 0
+    for i in range(0, len(ris_d_t)):
+        if ris_d_t[i] != pruning_set_y[i]:
+            count_error += 1
+    tree, num, count_error = reduced_error(tree, tree, pruning_set_x, pruning_set_y, count_error)
+    return tree, num
 
 
 """
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.tree import DecisionTreeClassifier
-import graphviz
-from sklearn import tree
-import os
-
-os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin/'
-
-
-data_X = [[1., 1.], [2., 2.], [3., 3.], [4., 4.], [5., 5.], [6., 6.], [7., 7.], [8., 8.], [9., 9.], [10., 10.], [11., 11.], [12., 12.]]
-data_Y = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"]
-
-n_classes = len(unique_counts(data_Y))
-plot_step = 0.02
-
-data = {"data": [], "target": [], "target_names": [], "DESCR": "no descr", "feature_names": [], "filename": "no name"}
-for el in data_X:
-    data["data"].append(el)
-for el in data_Y:
-    data["target"].append(int(el))
-for el in unique_counts(data_Y):
-    data["target_names"].append(el)
-for el in range(0, len(data_X[0])):
-    data["feature_names"].append("X" + str(el))
-data["data"] = np.array(data["data"])
-data["target"] = np.array(data["target"])
-data["target_names"] = np.array(data["target_names"])
-
-combinations = []
-for i in range(0, len(data_X[0]) - 1):
-    for j in range(i + 1, len(data_X[0])):
-        combinations.append([i, j])
-
-for pairidx, pair in enumerate(combinations):
-    # We only take the two corresponding features
-    X = data["data"][:, pair]
-    y = data["target"]
-
-    # Train
-    clf = DecisionTreeClassifier().fit(X, y)
-
-    dot_data = tree.export_graphviz(clf, rounded=True, special_characters=True)
-
-    s = dot_data.split("<br/>value = [")
-    for i in range(1, len(s)):
-        while s[i][0] != ']':
-            s[i] = s[i][1:]
-        s[0] += s[i][1:]
-    dot_data = s[0]
-
-    graph = graphviz.Source(dot_data)
-    graph.render("Scikit_tree")
-
-    # Plot the decision boundary
-    n = np.sqrt(len(combinations))
-    if n % 1 > 0:
-        n = n + 1
-    n = int(n)
-    if n * (n - 1) == len(combinations):
-        plt.subplot(n - 1, n, pairidx + 1)
-    else:
-        plt.subplot(n, n, pairidx + 1)
-
-    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-    xx, yy = np.meshgrid(np.arange(x_min, x_max, plot_step),
-                         np.arange(y_min, y_max, plot_step))
-    plt.tight_layout(h_pad=0.5, w_pad=0.5, pad=2.5)
-
-    Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
-    Z = Z.reshape(xx.shape)
-    cs = plt.contourf(xx, yy, Z, cmap=plt.cm.RdYlBu)
-
-    plt.xlabel(data["feature_names"][pair[0]])
-    plt.ylabel(data["feature_names"][pair[1]])
-
-    # Plot the training points
-    for i in range(0, n_classes):
-        idx = np.where(y == i)
-        plt.scatter(X[idx, 0], X[idx, 1], c="w", label=data["target_names"][i],
-                    cmap=plt.cm.RdYlBu, edgecolor='black', s=15)
-
-plt.suptitle("Decision surface of a decision tree using paired features")
-plt.axis("tight")
-plt.show()
+tr_X = [[6, 1], [2, 2], [3, 3], [2, 4], [9, 5], [6, 6], [7, 7], [7, 8], [9, 9], [1, 10]]
+tr_Y = ["B", "A", "A", "B", "B", "A", "A", "B", "A", "B"]
+te_X = [[2, 3], [8, 8], [4, 4], [7, 10]]
+te_Y = ["B", "A", "A", "B"]
+decision_tree, num_nodes = fit(tr_X, tr_Y, gini(tr_Y))
+print(decision_tree)
+t, nnnn = post_pruning_reduced_error_method(decision_tree, tr_X, tr_Y)
+print(nnnn)
+print(t)
 """
