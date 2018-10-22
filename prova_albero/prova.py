@@ -25,6 +25,10 @@ class Tree:
             ret += self.false_branch.__str__(level + 1)
         return ret
 
+    def __copy__(self):
+        return Tree(self.col.copy, self.value.copy, self.label.copy, self.true_branch.copy, self.false_branch.copy,
+                    self.true_branch_number.copy, self.false_branch_number.copy, self.gini_value.copy, self.gain.copy)
+
     def export_graphviz(self, number=0):
         ret = ""
         if number == 0:
@@ -94,20 +98,25 @@ def splittable(data, labels, parent_gini, pre_pruning_no_useless_split, pre_prun
         best_gain = -1
         true_best_gini = 1
         false_best_gini = 1
+        tested = []
+        for i in range(0, len(data[0])):
+            tested.append([])
         for i in range(0, len(data[0])):
             for j in data:
-                t_b, f_b, t_b_l, f_b_l = split(data, labels, i, j[i])
-                if len(t_b) >= pre_pruning_minimum_n_object and len(f_b) >= pre_pruning_minimum_n_object:
-                    gini_split_1 = gini(t_b_l)
-                    gini_split_2 = gini(f_b_l)
-                    p = float(len(t_b_l)) / len(t_b_l + f_b_l)
-                    gain = parent_gini - p * gini_split_1 - (1 - p) * gini_split_2
-                    if gain > best_gain:
-                        best_col = i
-                        best_value = j[i]
-                        true_best_gini = gini_split_1
-                        false_best_gini = gini_split_2
-                        best_gain = gain
+                if j[i] not in tested[i]:
+                    tested[i].append(j[i])
+                    t_b, f_b, t_b_l, f_b_l = split(data, labels, i, j[i])
+                    if len(t_b) >= pre_pruning_minimum_n_object and len(f_b) >= pre_pruning_minimum_n_object:
+                        gini_split_1 = gini(t_b_l)
+                        gini_split_2 = gini(f_b_l)
+                        p = float(len(t_b_l)) / len(t_b_l + f_b_l)
+                        gain = parent_gini - p * gini_split_1 - (1 - p) * gini_split_2
+                        if gain > best_gain:
+                            best_col = i
+                            best_value = j[i]
+                            true_best_gini = gini_split_1
+                            false_best_gini = gini_split_2
+                            best_gain = gain
         if best_col >= 0:
             return best_col, best_value, true_best_gini, false_best_gini, best_gain
     return -1, 0, 0, 0, 0
@@ -240,16 +249,3 @@ def post_pruning_reduced_error_method(tree, pruning_set_x, pruning_set_y):
             count_error += 1
     tree, num, count_error = reduced_error(tree, tree, pruning_set_x, pruning_set_y, count_error)
     return tree, num
-
-
-"""
-tr_X = [[6, 1], [2, 2], [3, 3], [2, 4], [9, 5], [6, 6], [7, 7], [7, 8], [9, 9], [1, 10]]
-tr_Y = ["B", "A", "A", "B", "B", "A", "A", "B", "A", "B"]
-te_X = [[2, 3], [8, 8], [4, 4], [7, 10]]
-te_Y = ["B", "A", "A", "B"]
-decision_tree, num_nodes = fit(tr_X, tr_Y, gini(tr_Y))
-print(decision_tree)
-t, nnnn = post_pruning_reduced_error_method(decision_tree, tr_X, tr_Y)
-print(nnnn)
-print(t)
-"""

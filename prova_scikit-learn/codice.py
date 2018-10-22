@@ -6,7 +6,7 @@ import os
 
 os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin/'
 
-data_set_name = "poker-hand-training-true"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
+data_set_name = "tic-tac-toe"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
 data_root = "../data_set/" + data_set_name + ".data"
 our_tree = True
 scikit_tree = True
@@ -243,40 +243,40 @@ def resolution(evaluation_name):
                 graph.render("trees/Scikit_tree_" + evaluation_name)
                 os.remove("trees/Scikit_tree_" + evaluation_name)
 
-    if post_pruning_reduced_error:
-        clf = our_decision_tree_classifier
-        decision_tree, num = clf.fit(training_X, training_Y, clf.gini(training_Y),
-                                     pre_pruning_no_useless_split=pre_pruning_no_useless_split,
-                                     pre_pruning_minimum_n_object=1)
-        Our_ris = clf.predict(test_X, decision_tree)
-        our_correct_evaluation = print_precision(Our_ris, test_Y, "Our correct evaluation: ", num=num)
-
-        if best_our_correct_evaluation < our_correct_evaluation \
-                or ((best_our_correct_evaluation_number > num or best_our_correct_evaluation_number == -1)
-                    and best_our_correct_evaluation <= our_correct_evaluation):
-            best_our_correct_evaluation = our_correct_evaluation
-            best_our_correct_evaluation_number = num
-            draw_tree(decision_tree, " (" + str(our_correct_evaluation) + "-" + str(len(test_Y)) + " "
-                      + str(num) + "n) Our_tree_" + evaluation_name)
-        if local_best_our_evaluation < our_correct_evaluation:
-            local_best_our_evaluation = our_correct_evaluation
-
-        num_of_validation = len(data) * 1 / 10
-        while len(validation_set_X) < num_of_validation:
-            validation_set_X.append(training_X[0])
-            training_X.pop(0)
-            validation_set_Y.append(training_Y[0])
-            training_Y.pop(0)
-        print("Training_set_Growing len: " + str(len(training_X)))
-        print("Training_set_Validation len: " + str(len(validation_set_X)))
-
     if our_tree:
+        clf = our_decision_tree_classifier
+        if post_pruning_reduced_error:
+            decision_tree, num = clf.fit(training_X, training_Y, clf.gini(training_Y),
+                                         pre_pruning_no_useless_split=pre_pruning_no_useless_split,
+                                         pre_pruning_minimum_n_object=1)
+            Our_ris = clf.predict(test_X, decision_tree)
+            our_correct_evaluation = print_precision(Our_ris, test_Y, "Our correct evaluation: ", num=num)
+
+            if best_our_correct_evaluation < our_correct_evaluation \
+                    or ((best_our_correct_evaluation_number > num or best_our_correct_evaluation_number == -1)
+                        and best_our_correct_evaluation <= our_correct_evaluation):
+                best_our_correct_evaluation = our_correct_evaluation
+                best_our_correct_evaluation_number = num
+                draw_tree(decision_tree, " (" + str(our_correct_evaluation) + "-" + str(len(test_Y)) + " "
+                          + str(num) + "n) Our_tree_" + evaluation_name)
+            if local_best_our_evaluation < our_correct_evaluation:
+                local_best_our_evaluation = our_correct_evaluation
+
+            num_of_validation = len(data) * 1 / 10
+            while len(validation_set_X) < num_of_validation:
+                validation_set_X.append(training_X[0])
+                training_X.pop(0)
+                validation_set_Y.append(training_Y[0])
+                training_Y.pop(0)
+            print("Training_set_Growing len: " + str(len(training_X)))
+            print("Training_set_Validation len: " + str(len(validation_set_X)))
+
         for i in pre_pruning_minimum_n_object:
+            decision_tree, num = clf.fit(training_X, training_Y, clf.gini(training_Y),
+                                         pre_pruning_no_useless_split=pre_pruning_no_useless_split,
+                                         pre_pruning_minimum_n_object=i)
             for j in post_pruning_pessimistic:
                 clf = our_decision_tree_classifier
-                decision_tree, num = clf.fit(training_X, training_Y, clf.gini(training_Y),
-                                             pre_pruning_no_useless_split=pre_pruning_no_useless_split,
-                                             pre_pruning_minimum_n_object=i)
                 str_name = ""
                 if post_pruning_reduced_error:
                     str_name = " with_growing_set"
@@ -301,21 +301,24 @@ def resolution(evaluation_name):
                     local_best_our_evaluation = our_correct_evaluation
 
                 if post_pruning_reduced_error:
+                    temp_decision_tree = decision_tree
+                    temp_num = num
                     str_name += " with_post_reduced_error"
-                    decision_tree, t_num = \
-                        clf.post_pruning_reduced_error_method(decision_tree, validation_set_X, validation_set_Y)
-                    num -= t_num
-                    Our_ris = clf.predict(test_X, decision_tree)
+                    temp_decision_tree, t_num = \
+                        clf.post_pruning_reduced_error_method(temp_decision_tree, validation_set_X, validation_set_Y)
+                    temp_num -= t_num
+                    Our_ris = clf.predict(test_X, temp_decision_tree)
                     our_correct_evaluation = \
-                        print_precision(Our_ris, test_Y, "Our correct evaluation" + str_name + ": ", num=num)
+                        print_precision(Our_ris, test_Y, "Our correct evaluation" + str_name + ": ", num=temp_num)
 
                     if best_our_correct_evaluation < our_correct_evaluation \
-                            or ((best_our_correct_evaluation_number > num or best_our_correct_evaluation_number == -1)
+                            or ((best_our_correct_evaluation_number > temp_num
+                                 or best_our_correct_evaluation_number == -1)
                                 and best_our_correct_evaluation <= our_correct_evaluation):
                         best_our_correct_evaluation = our_correct_evaluation
-                        best_our_correct_evaluation_number = num
-                        draw_tree(decision_tree, " (" + str(our_correct_evaluation) + "-" + str(len(test_Y)) + " "
-                                  + str(num) + "n) Our_tree_" + evaluation_name + str_name)
+                        best_our_correct_evaluation_number = temp_num
+                        draw_tree(temp_decision_tree, " (" + str(our_correct_evaluation) + "-" + str(len(test_Y)) + " "
+                                  + str(temp_num) + "n) Our_tree_" + evaluation_name + str_name)
                     if local_best_our_evaluation < our_correct_evaluation:
                         local_best_our_evaluation = our_correct_evaluation
 
