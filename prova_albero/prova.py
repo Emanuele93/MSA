@@ -187,12 +187,13 @@ def predict(data, root):
 
 
 def post_pruning_pessimistic_method(tree, min_gain, num=0):
-    if tree.true_branch.col is not None:
+    if tree.true_branch is not None and tree.true_branch.col is not None:
         num, tree.true_branch = post_pruning_pessimistic_method(tree.true_branch, min_gain, num=num)
-    if tree.false_branch.col is not None:
+    if tree.false_branch is not None and tree.false_branch.col is not None:
         num, tree.false_branch = post_pruning_pessimistic_method(tree.false_branch, min_gain, num=num)
 
-    if tree.true_branch.col is None and tree.false_branch.col is None and tree.gain < min_gain:
+    if tree.true_branch is not None and tree.false_branch is not None  \
+            and tree.true_branch.col is None and tree.false_branch.col is None and tree.gain < min_gain:
         tree.col = None
         tree.value = None
         tree.true_branch = None
@@ -213,12 +214,13 @@ def useless_node(root, pruning_set_x, pruning_set_y, error):
 
 
 def reduced_error(root, sub_tree, pruning_set_x, pruning_set_y, error, num=0):
-    if sub_tree.true_branch.col is not None:
+    if sub_tree.true_branch is not None and sub_tree.true_branch.col is not None:
         sub_tree.true_branch, num, error = reduced_error(root, sub_tree.true_branch, pruning_set_x, pruning_set_y, error, num=num)
-    if sub_tree.false_branch.col is not None:
+    if sub_tree.false_branch is not None and sub_tree.false_branch.col is not None:
         sub_tree.false_branch, num, error = reduced_error(root, sub_tree.false_branch, pruning_set_x, pruning_set_y, error, num=num)
 
-    if sub_tree.true_branch.col is None and sub_tree.false_branch.col is None:
+    if sub_tree.true_branch is not None and sub_tree.false_branch is not None \
+            and sub_tree.true_branch.col is None and sub_tree.false_branch.col is None:
         temp_sub_tree_col = sub_tree.col
         sub_tree.col = None
         temp_sub_tree_value = sub_tree.value

@@ -6,11 +6,11 @@ import os
 
 os.environ["PATH"] += os.pathsep + 'C:/Program Files (x86)/Graphviz2.38/bin/'
 
-data_set_name = "tic-tac-toe"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
+data_set_name = "poker-hand-training-true"  # krkopt, poker-hand-testing, poker-hand-training-true, tic-tac-toe
 data_root = "../data_set/" + data_set_name + ".data"
 our_tree = True
 scikit_tree = True
-print_tree = True
+print_tree = False
 best_scikit_correct_evaluation = 0
 best_our_correct_evaluation = 0
 best_our_correct_evaluation_number = -1
@@ -125,9 +125,9 @@ def cross_validation_method():
     cross_validation_number = 5  # di solito 5 o 10
     test_set_relation = 3 / 10
     pre_pruning_no_useless_split = True
-    pre_pruning_minimum_n_object = range(1, 4)  # secondo numero escluso (15)
-    post_pruning_pessimistic = range(0, 3)  # secondo numero escluso (da 2 a 10) -> il valore verrà diviso per 10
-    post_pruning_reduced_error = True
+    pre_pruning_minimum_n_object = range(1, 2)  # secondo numero escluso (15)
+    post_pruning_pessimistic = range(0, 1)  # secondo numero escluso (da 2 a 10) -> il valore verrà diviso per 10
+    post_pruning_reduced_error = False
 
     best_our_correct_evaluation = 0
     best_scikit_correct_evaluation = 0
@@ -151,6 +151,7 @@ def cross_validation_method():
         for ts in test_set:
             training_set.remove(ts)
         k += 1
+        print("Cross validation, group " + str(k))
         if scikit_tree and our_tree:
             s_r, o_r = resolution("cross_validation_" + str(k))
             scikit_results.append(float(s_r))
